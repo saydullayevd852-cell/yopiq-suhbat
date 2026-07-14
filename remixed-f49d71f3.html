@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Yopiq suhbat</title>
+<style>
+  :root {
+    --bg: #1B1F3B;
+    --panel: #242A52;
+    --border: #363c6b;
+    --amber: #E8A33D;
+    --text: #F5F1E8;
+    --muted: #8A8FBF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+  .center-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(circle at 30% 20%, var(--panel) 0%, var(--bg) 60%);
+  }
+  .card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--panel);
+    border-radius: 18px;
+    padding: 32px 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .seal { width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber), #C97B2E);
+    box-shadow: 0 0 0 3px rgba(232,163,61,0.18); }
+  h1 { font-size: 24px; margin: 14px 0 6px; }
+  p.sub { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 18px; }
+  label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display:block; margin-top: 10px; }
+  input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; color: var(--text); font-size: 15px; outline: none; margin-top: 4px;
+  }
+  button {
+    cursor: pointer; border: none; border-radius: 10px; font-weight: 700; font-size: 15px;
+  }
+  .primary-btn { margin-top: 18px; width: 100%; background: var(--amber); color: var(--bg); padding: 13px; }
+  .error { color: #E88989; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .hidden { display: none !important; }
+
+  .app-shell { display: flex; height: 100vh; }
+  .sidebar { width: 210px; min-width: 210px; background: var(--panel); padding: 16px 12px;
+    display: flex; flex-direction: column; border-right: 1px solid #2f3560; }
+  .sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .group-name { font-size: 15px; font-weight: 700; }
+  .members-label { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  #memberList { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
+  .member-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 700; color: var(--bg); flex-shrink:0; }
+  .invite-btn { background: transparent; border: 1px solid var(--amber); color: var(--amber);
+    border-radius: 8px; padding: 9px; font-size: 12px; margin-top: 10px; }
+  .invite-box { margin-top: 10px; background: var(--bg); border-radius: 10px; padding: 10px; }
+  .invite-code { font-family: monospace; font-size: 18px; letter-spacing: .2em; color: var(--amber); text-align: center; }
+  .invite-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+  .chat-main { flex: 1; display: flex; flex-direction: column; }
+  .chat-header { padding: 14px 20px; border-bottom: 1px solid #2f3560; display: flex;
+    justify-content: space-between; align-items: baseline; }
+  .chat-header-title { font-size: 16px; font-weight: 700; }
+  .chat-header-sub { font-size: 12px; color: var(--muted); }
+  .messages-area { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .empty-state { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; }
+  .msg-row { display: flex; gap: 8px; align-items: flex-end; }
+  .msg-row.mine { justify-content: flex-end; }
+  .avatar-sm { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 10px; font-weight: 700; color: var(--bg); flex-shrink: 0; }
+  .bubble { max-width: 68%; padding: 9px 13px; border-radius: 14px; font-size: 14px; }
+  .bubble.mine { background: var(--amber); color: var(--bg); border-bottom-right-radius: 4px; }
+  .bubble.theirs { background: var(--panel); border-bottom-left-radius: 4px; }
+  .bubble-user { font-size: 11px; font-weight: 700; opacity: .75; margin-bottom: 2px; }
+  .bubble-time { font-size: 10px; opacity: .6; margin-top: 4px; text-align: right; }
+  .composer { display: flex; gap: 10px; padding: 12px 20px 18px; border-top: 1px solid #2f3560; }
+  .composer input { margin: 0; border-radius: 20px; flex: 1; }
+  .send-btn { background: var(--amber); color: var(--bg); border-radius: 20px; padding: 0 20px; }
+</style>
+</head>
+<body>
+
+<!-- loading -->
+<div id="loadingScreen" class="center-screen">
+  <div class="seal"></div>
+</div>
+
+<!-- setup (create group) -->
+<div id="setupScreen" class="center-screen hidden">
+  <div class="card">
+    <div class="seal"></div>
+    <h1>Yopiq xona</h1>
+    <p class="sub">Bu yerda hali guruh yo'q. Birinchi bo'lib xona oching — do'stlaringizni faqat siz taklif qilasiz.</p>
+    <label>Xona nomi</label>
+    <input id="setupGroupName" maxlength="40" placeholder="Masalan: Beshtaso'm" />
+    <label>Sizning ismingiz</label>
+    <input id="setupAdminName" maxlength="24" placeholder="Ismingiz" />
+    <div class="error" id="setupError"></div>
+    <button class="primary-btn" onclick="createGroup()">Xonani ochish</button>
+  </div>
+</div>
+
+<!-- join -->
+<div id="joinScreen" class="center-screen hidden">
+  <div class="card">
+    <div class="seal"></div>
+    <h1 id="joinGroupName">Yopiq xona</h1>
+    <p class="sub">Bu xona yopiq. Kirish uchun ism va kirish kodini kiriting.</p>
+    <label>Ismingiz</label>
+    <input id="joinName" maxlength="24" placeholder="Ismingiz" />
+    <label>Kirish kodi</label>
+    <input id="joinCode" maxlength="6" style="letter-spacing:.15em; font-family:monospace" placeholder="••••••" />
+    <div class="error" id="joinError"></div>
+    <button class="primary-btn" onclick="joinGroup()">Kirish</button>
+  </div>
+</div>
+
+<!-- chat -->
+<div id="chatScreen" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="seal" style="width:26px;height:26px"></div>
+      <div class="group-name" id="sideGroupName"></div>
+    </div>
+    <div class="members-label">A'zolar</div>
+    <div id="memberList"></div>
+    <button class="invite-btn" onclick="toggleInvite()">Taklif kodi</button>
+    <div class="invite-box hidden" id="inviteBox">
+      <div class="invite-code" id="inviteCode"></div>
+      <div class="invite-hint">Faqat shu kodni bilganlar kira oladi. Do'stlaringizga shaxsan yuboring.</div>
+    </div>
+  </aside>
+  <main class="chat-main">
+    <div class="chat-header">
+      <span class="chat-header-title" id="chatTitle"></span>
+      <span class="chat-header-sub" id="chatWhoAmI"></span>
+    </div>
+    <div class="messages-area" id="messagesArea"></div>
+    <div class="composer">
+      <input id="draftInput" placeholder="Xabar yozing..." onkeydown="if(event.key==='Enter') sendMsg()" />
+      <button class="send-btn" onclick="sendMsg()">Yuborish</button>
+    </div>
+  </main>
+</div>
+
+<script>
+  // <<< SHU YERGA Apps Script'dan olingan Web app URL'ni qo'ying >>>
+  const API_URL = "https://script.google.com/macros/s/AKfycbzXoDlQdHl0ctNDuKtViQJXHRK0nbJkWwj0EgFSj1-KMQCDLXKkD7WcPV-M6CjCXMy8/exec";
+
+  const COLORS = ["#E8A33D", "#6FCF97", "#E88989", "#8AB4E8", "#C99BE8", "#E8D25E"];
+  function colorFor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+    return COLORS[Math.abs(h) % COLORS.length];
+  }
+  function timeStr(ts) {
+    return new Date(Number(ts)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  function show(id) {
+    ["loadingScreen","setupScreen","joinScreen","chatScreen"].forEach(s => {
+      document.getElementById(s).classList.toggle("hidden", s !== id);
+    });
+  }
+
+  let me = "";
+  let myCode = "";
+  let cfg = null;
+  let pollTimer = null;
+
+  async function api(params) {
+    const url = API_URL + "?" + new URLSearchParams(params).toString();
+    const res = await fetch(url);
+    return res.json();
+  }
+
+  async function init() {
+    if (API_URL.indexOf("PASTE_YOUR") === 0) {
+      document.body.innerHTML = "<div class='center-screen'><div class='card'><h1>Sozlanmagan</h1><p class='sub'>index.html ichidagi API_URL qatoriga Apps Script Web app URL manzilini qo'ying.</p></div></div>";
+      return;
+    }
+    const res = await api({ action: "config" });
+    if (res.exists) {
+      cfg = res;
+      document.getElementById("joinGroupName").textContent = cfg.groupName;
+      show("joinScreen");
+    } else {
+      show("setupScreen");
+    }
+  }
+
+  async function createGroup() {
+    const groupName = document.getElementById("setupGroupName").value.trim();
+    const adminName = document.getElementById("setupAdminName").value.trim();
+    if (!groupName || !adminName) return;
+    const res = await api({ action: "setup", groupName, adminName });
+    if (res.error) { document.getElementById("setupError").textContent = res.error; return; }
+    cfg = res;
+    me = adminName;
+    myCode = cfg.accessCode;
+    enterChat(true);
+  }
+
+  async function joinGroup() {
+    const name = document.getElementById("joinName").value.trim();
+    const code = document.getElementById("joinCode").value.trim();
+    if (!name || !code) return;
+    const res = await api({ action: "join", name, code });
+    if (res.error) { document.getElementById("joinError").textContent = res.error; return; }
+    cfg = res;
+    me = name;
+    myCode = code.toUpperCase();
+    enterChat(false);
+  }
+
+  function toggleInvite() {
+    document.getElementById("inviteBox").classList.toggle("hidden");
+  }
+
+  function renderMembers() {
+    const el = document.getElementById("memberList");
+    el.innerHTML = "";
+    (cfg.members || []).forEach(m => {
+      const row = document.createElement("div");
+      row.className = "member-row";
+      row.innerHTML = `<div class="avatar" style="background:${colorFor(m)}">${m[0].toUpperCase()}</div>
+        <span>${m}${m === cfg.admin ? " · egasi" : ""}</span>`;
+      el.appendChild(row);
+    });
+  }
+
+  function enterChat(showInviteFirst) {
+    document.getElementById("sideGroupName").textContent = cfg.groupName;
+    document.getElementById("chatTitle").textContent = cfg.groupName;
+    document.getElementById("chatWhoAmI").textContent = "siz: " + me;
+    document.getElementById("inviteCode").textContent = cfg.accessCode;
+    renderMembers();
+    show("chatScreen");
+    if (showInviteFirst) document.getElementById("inviteBox").classList.remove("hidden");
+    loadMessages();
+    pollTimer = setInterval(() => { loadMessages(); refreshConfig(); }, 3000);
+  }
+
+  async function refreshConfig() {
+    const res = await api({ action: "config" });
+    if (res.exists) { cfg = res; renderMembers(); }
+  }
+
+  async function loadMessages() {
+    const res = await api({ action: "messages" });
+    if (!res.messages) return;
+    const el = document.getElementById("messagesArea");
+    const wasBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+    el.innerHTML = "";
+    if (res.messages.length === 0) {
+      el.innerHTML = "<div class='empty-state'>Hali xabar yo'q. Birinchi bo'lib yozing.</div>";
+      return;
+    }
+    res.messages.forEach(m => {
+      const mine = m.user === me;
+      const row = document.createElement("div");
+      row.className = "msg-row" + (mine ? " mine" : "");
+      row.innerHTML = `
+        ${!mine ? `<div class="avatar-sm" style="background:${colorFor(m.user)}">${m.user[0].toUpperCase()}</div>` : ""}
+        <div class="bubble ${mine ? "mine" : "theirs"}">
+          ${!mine ? `<div class="bubble-user">${m.user}</div>` : ""}
+          <div>${m.text.replace(/</g,"&lt;")}</div>
+          <div class="bubble-time">${timeStr(m.ts)}</div>
+        </div>`;
+      el.appendChild(row);
+    });
+    if (wasBottom) el.scrollTop = el.scrollHeight;
+  }
+
+  async function sendMsg() {
+    const input = document.getElementById("draftInput");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    await api({ action: "send", user: me, text, code: myCode });
+    loadMessages();
+  }
+
+  init();
+</script>
+</body>
+</html>
