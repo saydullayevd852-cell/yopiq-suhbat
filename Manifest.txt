@@ -1,0 +1,11 @@
+{
+  "name": "Yopiq Suhbat",
+  "short_name": "YopiqSuhbat",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1B1F3B",
+  "theme_color": "#E8A33D",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
