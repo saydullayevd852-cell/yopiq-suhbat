@@ -1,201 +1,408 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#E8A33D" />
+<link rel="manifest" href="manifest.json" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <title>Yopiq suhbat</title>
 <style>
   :root {
-    --bg: #1B1F3B;
-    --panel: #242A52;
-    --border: #363c6b;
-    --amber: #E8A33D;
-    --text: #F5F1E8;
-    --muted: #8A8FBF;
+    --bg: #1B1F3B; --panel: #242A52; --border: #363c6b;
+    --amber: #E8A33D; --text: #F5F1E8; --muted: #8A8FBF; --danger: #E88989;
+    --shadow: rgba(0,0,0,0.35);
+  }
+  html[data-theme="light"] {
+    --bg: #F6F3EC; --panel: #FFFFFF; --border: #E4DFD2;
+    --amber: #C97B2E; --text: #2A2A2A; --muted: #837A67; --danger: #C0392B;
+    --shadow: rgba(0,0,0,0.10);
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0;
-    font-family: Inter, system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    overflow: hidden;
+    margin: 0; font-family: Inter, system-ui, sans-serif;
+    background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+    transition: background .25s ease, color .25s ease;
   }
   .center-screen {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: radial-gradient(circle at 30% 20%, var(--panel) 0%, var(--bg) 60%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: radial-gradient(circle at 30% 20%, var(--panel) 0%, var(--bg) 60%);
   }
   .card {
-    width: 100%;
-    max-width: 380px;
-    background: var(--panel);
-    border-radius: 18px;
-    padding: 32px 28px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    width: 100%; max-width: 380px; background: var(--panel); border-radius: 18px;
+    padding: 32px 28px; box-shadow: 0 20px 60px var(--shadow);
+    animation: cardIn .35s ease;
   }
+  @keyframes cardIn { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
   .seal { width: 34px; height: 34px; border-radius: 50%;
     background: linear-gradient(135deg, var(--amber), #C97B2E);
     box-shadow: 0 0 0 3px rgba(232,163,61,0.18); }
   h1 { font-size: 24px; margin: 14px 0 6px; }
   p.sub { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 18px; }
   label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display:block; margin-top: 10px; }
-  input {
+  input, select {
     width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
     padding: 12px 14px; color: var(--text); font-size: 15px; outline: none; margin-top: 4px;
+    font-family: inherit;
   }
-  button {
-    cursor: pointer; border: none; border-radius: 10px; font-weight: 700; font-size: 15px;
-  }
-  .primary-btn { margin-top: 18px; width: 100%; background: var(--amber); color: var(--bg); padding: 13px; }
-  .error { color: #E88989; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  button { cursor: pointer; border: none; border-radius: 10px; font-weight: 700; font-size: 15px; font-family: inherit; }
+  .primary-btn { margin-top: 18px; width: 100%; background: var(--amber); color: #1B1F3B; padding: 13px; transition: transform .15s ease; }
+  .primary-btn:active { transform: scale(.98); }
+  .error { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 16px; }
   .hidden { display: none !important; }
+  .lang-row { display: flex; gap: 6px; justify-content: center; margin-top: 16px; }
+  .lang-chip { background: var(--bg); border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; font-size: 11px; border-radius: 20px; font-weight: 600; }
+  .lang-chip.active { background: var(--amber); color: #1B1F3B; border-color: var(--amber); }
 
   .app-shell { display: flex; height: 100vh; }
-  .sidebar { width: 210px; min-width: 210px; background: var(--panel); padding: 16px 12px;
-    display: flex; flex-direction: column; border-right: 1px solid #2f3560; }
-  .sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .sidebar {
+    width: 230px; min-width: 230px; background: var(--panel); padding: 16px 12px;
+    display: flex; flex-direction: column; border-right: 1px solid var(--border);
+    transition: transform .25s ease;
+  }
+  .sidebar-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .group-name { font-size: 15px; font-weight: 700; }
+  .search-box { position: relative; margin-bottom: 12px; }
+  .search-box input { padding-left: 30px; font-size: 13px; }
+  .search-box::before { content: "🔍"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: .6; }
+  .side-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .side-tab { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--muted); font-size: 11px; padding: 7px 4px; border-radius: 8px; font-weight: 600; }
+  .side-tab.active { background: var(--amber); color: #1B1F3B; border-color: var(--amber); }
   .members-label { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
   #memberList { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
   .member-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   .avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-size: 11px; font-weight: 700; color: var(--bg); flex-shrink:0; }
-  .invite-btn { background: transparent; border: 1px solid var(--amber); color: var(--amber);
-    border-radius: 8px; padding: 9px; font-size: 12px; margin-top: 10px; }
-  .invite-box { margin-top: 10px; background: var(--bg); border-radius: 10px; padding: 10px; }
-  .invite-code { font-family: monospace; font-size: 18px; letter-spacing: .2em; color: var(--amber); text-align: center; }
+    justify-content: center; font-size: 11px; font-weight: 700; color: #1B1F3B; flex-shrink:0; }
+  .side-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .ghost-btn { background: transparent; border: 1px solid var(--amber); color: var(--amber); border-radius: 8px; padding: 9px; font-size: 12px; }
+  .invite-box { margin-top: 8px; background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
+  .invite-code { font-family: monospace; font-size: 18px; letter-spacing: .2em; color: var(--amber); }
   .invite-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .invite-box img { margin-top: 8px; border-radius: 8px; background: #fff; padding: 6px; }
 
-  .chat-main { flex: 1; display: flex; flex-direction: column; }
-  .chat-header { padding: 14px 20px; border-bottom: 1px solid #2f3560; display: flex;
-    justify-content: space-between; align-items: baseline; }
+  .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .chat-header {
+    padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex;
+    justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .hamburger { display: none; background: transparent; color: var(--text); font-size: 20px; padding: 4px 8px; }
   .chat-header-title { font-size: 16px; font-weight: 700; }
   .chat-header-sub { font-size: 12px; color: var(--muted); }
+  .header-actions { display: flex; gap: 6px; align-items: center; }
+  .icon-btn { background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    width: 34px; height: 34px; border-radius: 50%; font-size: 15px; display:flex; align-items:center; justify-content:center; }
+
+  .pinned-bar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 8px 20px;
+    display: flex; gap: 8px; overflow-x: auto; }
+  .pinned-chip { background: var(--bg); border: 1px solid var(--amber); color: var(--text); font-size: 11.5px;
+    padding: 6px 10px; border-radius: 10px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+
   .messages-area { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
   .empty-state { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; }
-  .msg-row { display: flex; gap: 8px; align-items: flex-end; }
+  .skeleton-row { display: flex; gap: 8px; align-items: flex-end; }
+  .skeleton-row.right { justify-content: flex-end; }
+  .skeleton-bubble { height: 36px; border-radius: 14px; background: linear-gradient(90deg, var(--panel) 25%, var(--border) 37%, var(--panel) 63%);
+    background-size: 400% 100%; animation: skeletonPulse 1.4s ease infinite; }
+  @keyframes skeletonPulse { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  .msg-row { display: flex; gap: 8px; align-items: flex-end; position: relative; animation: msgIn .2s ease; }
+  @keyframes msgIn { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
   .msg-row.mine { justify-content: flex-end; }
   .avatar-sm { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-size: 10px; font-weight: 700; color: var(--bg); flex-shrink: 0; }
-  .bubble { max-width: 68%; padding: 9px 13px; border-radius: 14px; font-size: 14px; }
-  .bubble.mine { background: var(--amber); color: var(--bg); border-bottom-right-radius: 4px; }
+    justify-content: center; font-size: 10px; font-weight: 700; color: #1B1F3B; flex-shrink: 0; }
+  .bubble { max-width: 68%; padding: 9px 13px; border-radius: 14px; font-size: 14px; position: relative; }
+  .bubble.mine { background: var(--amber); color: #1B1F3B; border-bottom-right-radius: 4px; }
   .bubble.theirs { background: var(--panel); border-bottom-left-radius: 4px; }
+  .bubble.pinned { outline: 2px solid var(--amber); }
   .bubble-user { font-size: 11px; font-weight: 700; opacity: .75; margin-bottom: 2px; }
   .bubble-time { font-size: 10px; opacity: .6; margin-top: 4px; text-align: right; }
-  .composer { display: flex; gap: 10px; padding: 12px 20px 18px; border-top: 1px solid #2f3560; }
-  .composer input { margin: 0; border-radius: 20px; flex: 1; }
-  .send-btn { background: var(--amber); color: var(--bg); border-radius: 20px; padding: 0 20px; }
+  .bubble img.msg-media { max-width: 100%; max-height: 260px; border-radius: 10px; display: block; margin-bottom: 4px; cursor: pointer; }
+  .bubble video.msg-media { max-width: 100%; max-height: 260px; border-radius: 10px; display: block; margin-bottom: 4px; }
+  .file-chip { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 8px 10px; text-decoration: none; color: inherit; }
+  .file-chip .file-name { font-size: 12.5px; word-break: break-all; }
+  .msg-toolbar { position: absolute; top: -26px; right: 0; display: none; gap: 4px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 20px; padding: 3px; box-shadow: 0 4px 12px var(--shadow); }
+  .msg-row:hover .msg-toolbar { display: flex; }
+  .msg-toolbar button { background: transparent; color: var(--text); font-size: 12px; width: 24px; height: 24px; border-radius: 50%; }
+  .msg-toolbar button:hover { background: var(--bg); }
+
+  .composer { display: flex; gap: 8px; padding: 10px 20px 16px; border-top: 1px solid var(--border); align-items: center; }
+  .composer input[type=text] { margin: 0; border-radius: 20px; flex: 1; }
+  .send-btn { background: var(--amber); color: #1B1F3B; border-radius: 20px; padding: 0 20px; height: 40px; }
+  .attach-btn { background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    width: 40px; height: 40px; border-radius: 50%; font-size: 18px; flex-shrink: 0; }
+  #fileInput { display: none; }
+  .attach-preview { display: flex; align-items: center; gap: 8px; background: var(--panel);
+    border-radius: 10px; padding: 6px 10px; margin: 0 20px 8px; font-size: 12.5px; }
+  .attach-preview button { background: transparent; color: var(--danger); font-size: 13px; padding: 2px 6px; }
+  .uploading-note { font-size: 11px; color: var(--muted); margin: 0 20px 6px; }
+
+  .toast-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 999;
+    display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast { background: var(--panel); color: var(--text); border: 1px solid var(--border); padding: 10px 16px;
+    border-radius: 10px; font-size: 13px; box-shadow: 0 8px 24px var(--shadow); animation: toastIn .2s ease; }
+  @keyframes toastIn { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+
+  @media (max-width: 760px) {
+    .hamburger { display: block; }
+    .sidebar { position: fixed; z-index: 50; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: 0 0 30px var(--shadow); }
+    .sidebar.open { transform: translateX(0); }
+    .bubble { max-width: 82%; }
+  }
 </style>
 </head>
 <body>
 
-<!-- loading -->
 <div id="loadingScreen" class="center-screen">
   <div class="seal"></div>
 </div>
 
-<!-- setup (create group) -->
 <div id="setupScreen" class="center-screen hidden">
   <div class="card">
     <div class="seal"></div>
-    <h1>Yopiq xona</h1>
-    <p class="sub">Bu yerda hali guruh yo'q. Birinchi bo'lib xona oching — do'stlaringizni faqat siz taklif qilasiz.</p>
-    <label>Xona nomi</label>
-    <input id="setupGroupName" maxlength="40" placeholder="Masalan: Beshtaso'm" />
-    <label>Sizning ismingiz</label>
-    <input id="setupAdminName" maxlength="24" placeholder="Ismingiz" />
+    <h1 data-i18n="setupTitle">Yopiq xona</h1>
+    <p class="sub" data-i18n="setupIntro">Bu yerda hali guruh yo'q. Birinchi bo'lib xona oching — do'stlaringizni faqat siz taklif qilasiz.</p>
+    <label data-i18n="roomName">Xona nomi</label>
+    <input id="setupGroupName" maxlength="40" data-i18n-ph="roomNamePh" placeholder="Masalan: Beshtaso'm" />
+    <label data-i18n="yourName">Sizning ismingiz</label>
+    <input id="setupAdminName" maxlength="24" data-i18n-ph="yourNamePh" placeholder="Ismingiz" />
     <div class="error" id="setupError"></div>
-    <button class="primary-btn" onclick="createGroup()">Xonani ochish</button>
+    <button class="primary-btn" onclick="createGroup()" data-i18n="openRoom">Xonani ochish</button>
+    <div class="lang-row" id="langRowSetup"></div>
   </div>
 </div>
 
-<!-- join -->
 <div id="joinScreen" class="center-screen hidden">
   <div class="card">
     <div class="seal"></div>
     <h1 id="joinGroupName">Yopiq xona</h1>
-    <p class="sub">Bu xona yopiq. Kirish uchun ism va kirish kodini kiriting.</p>
-    <label>Ismingiz</label>
-    <input id="joinName" maxlength="24" placeholder="Ismingiz" />
-    <label>Kirish kodi</label>
+    <p class="sub" data-i18n="joinIntro">Bu xona yopiq. Kirish uchun ism va kirish kodini kiriting.</p>
+    <label data-i18n="yourName">Ismingiz</label>
+    <input id="joinName" maxlength="24" data-i18n-ph="yourNamePh" placeholder="Ismingiz" />
+    <label data-i18n="accessCode">Kirish kodi</label>
     <input id="joinCode" maxlength="6" style="letter-spacing:.15em; font-family:monospace" placeholder="••••••" />
     <div class="error" id="joinError"></div>
-    <button class="primary-btn" onclick="joinGroup()">Kirish</button>
+    <button class="primary-btn" onclick="joinGroup()" data-i18n="join">Kirish</button>
+    <div class="lang-row" id="langRowJoin"></div>
   </div>
 </div>
 
-<!-- chat -->
 <div id="chatScreen" class="app-shell hidden">
-  <aside class="sidebar">
+  <div id="sidebarOverlay" onclick="closeSidebar()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:40;"></div>
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="seal" style="width:26px;height:26px"></div>
       <div class="group-name" id="sideGroupName"></div>
     </div>
-    <div class="members-label">A'zolar</div>
+    <div class="search-box">
+      <input id="searchInput" type="text" data-i18n-ph="searchPh" placeholder="Qidirish..." oninput="renderMessages()" />
+    </div>
+    <div class="side-tabs">
+      <button class="side-tab active" id="tabAll" onclick="setViewFilter('all')" data-i18n="allMessages">Barchasi</button>
+      <button class="side-tab" id="tabFav" onclick="setViewFilter('fav')" data-i18n="favorites">Sevimli</button>
+      <button class="side-tab" id="tabPin" onclick="setViewFilter('pin')" data-i18n="pinnedTab">Pin</button>
+    </div>
+    <div class="members-label" data-i18n="members">A'zolar</div>
     <div id="memberList"></div>
-    <button class="invite-btn" onclick="toggleInvite()">Taklif kodi</button>
+    <div class="side-actions">
+      <button class="ghost-btn" onclick="toggleInvite()" data-i18n="inviteCodeBtn">Taklif kodi</button>
+      <button class="ghost-btn" onclick="exportChat()" data-i18n="exportBtn">⬇ Suhbatni yuklab olish</button>
+      <button class="ghost-btn" onclick="exportChatPdf()" data-i18n="exportPdfBtn">⬇ PDF sifatida yuklab olish</button>
+      <button class="ghost-btn" onclick="toggleTheme()" id="themeBtnLabel">🌙 Dark</button>
+    </div>
     <div class="invite-box hidden" id="inviteBox">
       <div class="invite-code" id="inviteCode"></div>
-      <div class="invite-hint">Faqat shu kodni bilganlar kira oladi. Do'stlaringizga shaxsan yuboring.</div>
+      <div class="invite-hint" data-i18n="inviteHint">Faqat shu kodni bilganlar kira oladi. Do'stlaringizga shaxsan yuboring.</div>
+      <img id="qrImg" width="140" height="140" alt="QR" />
+      <div class="invite-hint" data-i18n="qrHint">Do'stingiz shu QR-kodni skanerlasa, kod avtomatik to'ldiriladi.</div>
     </div>
+    <div class="lang-row" id="langRowChat"></div>
   </aside>
+
   <main class="chat-main">
     <div class="chat-header">
-      <span class="chat-header-title" id="chatTitle"></span>
-      <span class="chat-header-sub" id="chatWhoAmI"></span>
+      <div class="chat-header-left">
+        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <div>
+          <div class="chat-header-title" id="chatTitle"></div>
+          <div class="chat-header-sub" id="chatWhoAmI"></div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleTheme()" title="Theme">🌓</button>
+      </div>
     </div>
+    <div class="pinned-bar hidden" id="pinnedBar"></div>
     <div class="messages-area" id="messagesArea"></div>
+    <div id="attachPreview" class="attach-preview hidden">
+      <span id="attachPreviewName"></span>
+      <button onclick="clearAttachment()">✕ <span data-i18n="cancel">bekor qilish</span></button>
+    </div>
+    <div id="uploadingNote" class="uploading-note hidden" data-i18n="uploading">Yuborilmoqda...</div>
     <div class="composer">
-      <input id="draftInput" placeholder="Xabar yozing..." onkeydown="if(event.key==='Enter') sendMsg()" />
-      <button class="send-btn" onclick="sendMsg()">Yuborish</button>
+      <input type="file" id="fileInput" onchange="onFileChosen(event)" />
+      <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Fayl">📎</button>
+      <input type="text" id="draftInput" data-i18n-ph="msgPh" placeholder="Xabar yozing..." oninput="saveDraft()" onkeydown="if(event.key==='Enter') sendMsg()" />
+      <button class="send-btn" onclick="sendMsg()" data-i18n="send">Yuborish</button>
     </div>
   </main>
 </div>
 
-<script>
-  // <<< SHU YERGA Apps Script'dan olingan Web app URL'ni qo'ying >>>
-  const API_URL = "https://script.google.com/macros/s/AKfycbzXoDlQdHl0ctNDuKtViQJXHRK0nbJkWwj0EgFSj1-KMQCDLXKkD7WcPV-M6CjCXMy8/exec";
+<div class="toast-wrap" id="toastWrap"></div>
 
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbzXoDlQdHl0ctNDuKtViQJXHRK0nbJkWwj0EgFSj1-KMQCDLXKkD7WcPV-M6CjCXMy8/exec";
+  const MAX_FILE_MB = 8;
+
+  // ---------- i18n ----------
+  const I18N = {
+    setupTitle: {uz:"Yopiq xona", en:"Closed room", ru:"Закрытая комната"},
+    setupIntro: {uz:"Bu yerda hali guruh yo'q. Birinchi bo'lib xona oching — do'stlaringizni faqat siz taklif qilasiz.", en:"There's no group here yet. Be the first to open a room — only you invite your friends.", ru:"Здесь пока нет группы. Откройте комнату первым — только вы приглашаете друзей."},
+    roomName: {uz:"Xona nomi", en:"Room name", ru:"Название комнаты"},
+    roomNamePh: {uz:"Masalan: Beshtaso'm", en:"e.g. The Crew", ru:"Например: Компания"},
+    yourName: {uz:"Sizning ismingiz", en:"Your name", ru:"Ваше имя"},
+    yourNamePh: {uz:"Ismingiz", en:"Your name", ru:"Ваше имя"},
+    openRoom: {uz:"Xonani ochish", en:"Open room", ru:"Открыть комнату"},
+    joinIntro: {uz:"Bu xona yopiq. Kirish uchun ism va kirish kodini kiriting.", en:"This room is closed. Enter your name and the access code to join.", ru:"Эта комната закрыта. Введите имя и код доступа."},
+    accessCode: {uz:"Kirish kodi", en:"Access code", ru:"Код доступа"},
+    join: {uz:"Kirish", en:"Join", ru:"Войти"},
+    searchPh: {uz:"Qidirish...", en:"Search...", ru:"Поиск..."},
+    allMessages: {uz:"Barchasi", en:"All", ru:"Все"},
+    favorites: {uz:"Sevimli", en:"Favorites", ru:"Избранное"},
+    pinnedTab: {uz:"Pin", en:"Pinned", ru:"Закреп."},
+    members: {uz:"A'zolar", en:"Members", ru:"Участники"},
+    inviteCodeBtn: {uz:"Taklif kodi", en:"Invite code", ru:"Код приглашения"},
+    exportBtn: {uz:"⬇ Suhbatni yuklab olish", en:"⬇ Export chat", ru:"⬇ Экспорт чата"},
+    inviteHint: {uz:"Faqat shu kodni bilganlar kira oladi. Do'stlaringizga shaxsan yuboring.", en:"Only people who know this code can join. Share it personally with friends.", ru:"Войти могут только те, кто знает код. Отправьте его лично друзьям."},
+    qrHint: {uz:"Do'stingiz shu QR-kodni skanerlasa, kod avtomatik to'ldiriladi.", en:"If your friend scans this QR code, it auto-fills the code.", ru:"Если друг отсканирует QR-код, код заполнится автоматически."},
+    cancel: {uz:"bekor qilish", en:"cancel", ru:"отмена"},
+    uploading: {uz:"Yuborilmoqda...", en:"Sending...", ru:"Отправка..."},
+    msgPh: {uz:"Xabar yozing...", en:"Type a message...", ru:"Введите сообщение..."},
+    send: {uz:"Yuborish", en:"Send", ru:"Отправить"},
+    noMessages: {uz:"Hali xabar yo'q. Birinchi bo'lib yozing.", en:"No messages yet. Be the first to write.", ru:"Пока нет сообщений. Напишите первым."},
+    noResults: {uz:"Hech narsa topilmadi.", en:"No results found.", ru:"Ничего не найдено."},
+    owner: {uz:"egasi", en:"owner", ru:"владелец"},
+    you: {uz:"siz", en:"you", ru:"вы"},
+    deleteConfirm: {uz:"Bu xabarni o'chirmoqchimisiz?", en:"Delete this message?", ru:"Удалить это сообщение?"},
+    copySuccess: {uz:"Nusxalandi", en:"Copied", ru:"Скопировано"},
+    fileTooBig: {uz:"Fayl juda katta. Maksimal hajm:", en:"File too large. Max size:", ru:"Файл слишком большой. Максимум:"},
+    fileError: {uz:"Fayl yuborishda xatolik yuz berdi.", en:"Error sending file.", ru:"Ошибка при отправке файла."},
+    linkCopied: {uz:"Havola nusxalandi", en:"Link copied", ru:"Ссылка скопирована"},
+    exported: {uz:"Suhbat yuklab olindi", en:"Chat exported", ru:"Чат экспортирован"},
+    exportPdfBtn: {uz:"⬇ PDF sifatida yuklab olish", en:"⬇ Export as PDF", ru:"⬇ Экспорт в PDF"}
+  };
+  let currentLang = localStorage.getItem("ys_lang") || "uz";
+
+  function t(key) {
+    return (I18N[key] && I18N[key][currentLang]) || (I18N[key] && I18N[key].uz) || key;
+  }
+  function applyLang() {
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+    document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-ph")); });
+    document.documentElement.lang = currentLang;
+    ["langRowSetup","langRowJoin","langRowChat"].forEach(renderLangRow);
+    renderMessages();
+  }
+  function renderLangRow(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = "";
+    ["uz","en","ru"].forEach(l => {
+      const b = document.createElement("button");
+      b.className = "lang-chip" + (l === currentLang ? " active" : "");
+      b.textContent = l.toUpperCase();
+      b.onclick = () => { currentLang = l; localStorage.setItem("ys_lang", l); applyLang(); };
+      el.appendChild(b);
+    });
+  }
+
+  // ---------- theme ----------
+  function applyTheme() {
+    const theme = localStorage.getItem("ys_theme") || "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+    const label = theme === "dark" ? "🌙 Dark" : "☀️ Light";
+    const btn = document.getElementById("themeBtnLabel");
+    if (btn) btn.textContent = label;
+  }
+  function toggleTheme() {
+    const cur = localStorage.getItem("ys_theme") || "dark";
+    localStorage.setItem("ys_theme", cur === "dark" ? "light" : "dark");
+    applyTheme();
+  }
+
+  // ---------- toast ----------
+  function toast(msg) {
+    const wrap = document.getElementById("toastWrap");
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  // ---------- state ----------
   const COLORS = ["#E8A33D", "#6FCF97", "#E88989", "#8AB4E8", "#C99BE8", "#E8D25E"];
   function colorFor(name) {
     let h = 0;
     for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
     return COLORS[Math.abs(h) % COLORS.length];
   }
-  function timeStr(ts) {
-    return new Date(Number(ts)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
+  function timeStr(ts) { return new Date(Number(ts)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
   function show(id) {
     ["loadingScreen","setupScreen","joinScreen","chatScreen"].forEach(s => {
       document.getElementById(s).classList.toggle("hidden", s !== id);
     });
   }
 
-  let me = "";
-  let myCode = "";
-  let cfg = null;
-  let pollTimer = null;
+  let me = "", myCode = "", cfg = null, pollTimer = null, pendingFile = null;
+  let allMessages = [];
+  let viewFilter = "all";
+
+  function favKey() { return "ys_favs_" + (cfg ? cfg.groupName : "") + "_" + me; }
+  function getFavs() { try { return JSON.parse(localStorage.getItem(favKey())) || []; } catch(e){ return []; } }
+  function toggleFav(id) {
+    let favs = getFavs();
+    if (favs.includes(id)) favs = favs.filter(f => f !== id); else favs.push(id);
+    localStorage.setItem(favKey(), JSON.stringify(favs));
+    renderMessages();
+  }
+
+  function draftKey() { return "ys_draft_" + (cfg ? cfg.groupName : ""); }
+  function saveDraft() { localStorage.setItem(draftKey(), document.getElementById("draftInput").value); }
+  function restoreDraft() {
+    const v = localStorage.getItem(draftKey());
+    if (v) document.getElementById("draftInput").value = v;
+  }
 
   async function api(params) {
     const url = API_URL + "?" + new URLSearchParams(params).toString();
     const res = await fetch(url);
     return res.json();
   }
+  async function apiPost(payload) {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+    return res.json();
+  }
+
+  function openSidebar() { document.getElementById("sidebar").classList.add("open"); document.getElementById("sidebarOverlay").style.display = "block"; }
+  function closeSidebar() { document.getElementById("sidebar").classList.remove("open"); document.getElementById("sidebarOverlay").style.display = "none"; }
 
   async function init() {
+    applyTheme();
+    applyLang();
     if (API_URL.indexOf("PASTE_YOUR") === 0) {
-      document.body.innerHTML = "<div class='center-screen'><div class='card'><h1>Sozlanmagan</h1><p class='sub'>index.html ichidagi API_URL qatoriga Apps Script Web app URL manzilini qo'ying.</p></div></div>";
+      document.body.innerHTML = "<div class='center-screen'><div class='card'><h1>Not configured</h1><p class='sub'>Set API_URL in index.html.</p></div></div>";
       return;
+    }
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
     }
     const res = await api({ action: "config" });
     if (res.exists) {
       cfg = res;
       document.getElementById("joinGroupName").textContent = cfg.groupName;
+      const urlCode = new URLSearchParams(window.location.search).get("code");
+      if (urlCode) document.getElementById("joinCode").value = urlCode.toUpperCase();
       show("joinScreen");
     } else {
       show("setupScreen");
@@ -208,9 +415,7 @@
     if (!groupName || !adminName) return;
     const res = await api({ action: "setup", groupName, adminName });
     if (res.error) { document.getElementById("setupError").textContent = res.error; return; }
-    cfg = res;
-    me = adminName;
-    myCode = cfg.accessCode;
+    cfg = res; me = adminName; myCode = cfg.accessCode;
     enterChat(true);
   }
 
@@ -220,15 +425,11 @@
     if (!name || !code) return;
     const res = await api({ action: "join", name, code });
     if (res.error) { document.getElementById("joinError").textContent = res.error; return; }
-    cfg = res;
-    me = name;
-    myCode = code.toUpperCase();
+    cfg = res; me = name; myCode = code.toUpperCase();
     enterChat(false);
   }
 
-  function toggleInvite() {
-    document.getElementById("inviteBox").classList.toggle("hidden");
-  }
+  function toggleInvite() { document.getElementById("inviteBox").classList.toggle("hidden"); }
 
   function renderMembers() {
     const el = document.getElementById("memberList");
@@ -237,7 +438,7 @@
       const row = document.createElement("div");
       row.className = "member-row";
       row.innerHTML = `<div class="avatar" style="background:${colorFor(m)}">${m[0].toUpperCase()}</div>
-        <span>${m}${m === cfg.admin ? " · egasi" : ""}</span>`;
+        <span>${m}${m === cfg.admin ? " · " + t("owner") : ""}</span>`;
       el.appendChild(row);
     });
   }
@@ -245,13 +446,26 @@
   function enterChat(showInviteFirst) {
     document.getElementById("sideGroupName").textContent = cfg.groupName;
     document.getElementById("chatTitle").textContent = cfg.groupName;
-    document.getElementById("chatWhoAmI").textContent = "siz: " + me;
+    document.getElementById("chatWhoAmI").textContent = t("you") + ": " + me;
     document.getElementById("inviteCode").textContent = cfg.accessCode;
+    const inviteUrl = window.location.href.split("?")[0] + "?code=" + cfg.accessCode;
+    document.getElementById("qrImg").src = "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" + encodeURIComponent(inviteUrl);
     renderMembers();
+    restoreDraft();
     show("chatScreen");
     if (showInviteFirst) document.getElementById("inviteBox").classList.remove("hidden");
+    renderSkeleton();
     loadMessages();
     pollTimer = setInterval(() => { loadMessages(); refreshConfig(); }, 3000);
+  }
+
+  function renderSkeleton() {
+    const el = document.getElementById("messagesArea");
+    const widths = [140, 190, 110, 160];
+    el.innerHTML = widths.map((w, i) => `
+      <div class="skeleton-row ${i % 2 === 1 ? "right" : ""}">
+        <div class="skeleton-bubble" style="width:${w}px"></div>
+      </div>`).join("");
   }
 
   async function refreshConfig() {
@@ -259,25 +473,70 @@
     if (res.exists) { cfg = res; renderMembers(); }
   }
 
+  function setViewFilter(f) {
+    viewFilter = f;
+    ["tabAll","tabFav","tabPin"].forEach(id => document.getElementById(id).classList.remove("active"));
+    document.getElementById(f === "all" ? "tabAll" : f === "fav" ? "tabFav" : "tabPin").classList.add("active");
+    renderMessages();
+  }
+
+  function renderMediaContent(m) {
+    if (m.type === "image" && m.fileUrl) return `<img class="msg-media" src="${m.fileUrl}" onclick="window.open('${m.fileUrl}','_blank')" alt="image" />`;
+    if (m.type === "video" && m.fileUrl) return `<video class="msg-media" src="${m.fileUrl}" controls></video>`;
+    if (m.type === "file" && m.fileUrl) return `<a class="file-chip" href="${m.fileUrl}" target="_blank" rel="noopener"><span>📄</span><span class="file-name">${(m.fileName || "file").replace(/</g,"&lt;")}</span></a>`;
+    return "";
+  }
+
   async function loadMessages() {
     const res = await api({ action: "messages" });
     if (!res.messages) return;
+    allMessages = res.messages;
+    renderPinnedBar();
+    renderMessages();
+  }
+
+  function renderPinnedBar() {
+    const bar = document.getElementById("pinnedBar");
+    const pinned = allMessages.filter(m => m.pinned);
+    if (pinned.length === 0) { bar.classList.add("hidden"); bar.innerHTML = ""; return; }
+    bar.classList.remove("hidden");
+    bar.innerHTML = pinned.map(m => `<div class="pinned-chip">📌 ${(m.text || m.fileName || "").replace(/</g,"&lt;").slice(0,40)}</div>`).join("");
+  }
+
+  function renderMessages() {
     const el = document.getElementById("messagesArea");
     const wasBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+    const search = (document.getElementById("searchInput").value || "").toLowerCase();
+    const favs = getFavs();
+    let list = allMessages;
+    if (viewFilter === "fav") list = list.filter(m => favs.includes(m.id));
+    if (viewFilter === "pin") list = list.filter(m => m.pinned);
+    if (search) list = list.filter(m => (m.text || "").toLowerCase().includes(search) || (m.fileName || "").toLowerCase().includes(search));
+
     el.innerHTML = "";
-    if (res.messages.length === 0) {
-      el.innerHTML = "<div class='empty-state'>Hali xabar yo'q. Birinchi bo'lib yozing.</div>";
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state">${allMessages.length === 0 ? t("noMessages") : t("noResults")}</div>`;
       return;
     }
-    res.messages.forEach(m => {
+    list.forEach(m => {
       const mine = m.user === me;
+      const isFav = favs.includes(m.id);
       const row = document.createElement("div");
       row.className = "msg-row" + (mine ? " mine" : "");
+      const mediaHtml = renderMediaContent(m);
+      const textHtml = m.text ? `<div>${m.text.replace(/</g,"&lt;")}</div>` : "";
       row.innerHTML = `
+        <div class="msg-toolbar">
+          <button onclick="toggleFav('${m.id}')" title="Favorite">${isFav ? "★" : "☆"}</button>
+          <button onclick="togglePin('${m.id}')" title="Pin">📌</button>
+          ${m.text ? `<button onclick="copyText(\`${m.text.replace(/`/g,"'").replace(/</g,"&lt;")}\`)" title="Copy">📋</button>` : ""}
+          ${mine ? `<button onclick="deleteMsg('${m.id}')" title="Delete">🗑</button>` : ""}
+        </div>
         ${!mine ? `<div class="avatar-sm" style="background:${colorFor(m.user)}">${m.user[0].toUpperCase()}</div>` : ""}
-        <div class="bubble ${mine ? "mine" : "theirs"}">
+        <div class="bubble ${mine ? "mine" : "theirs"} ${m.pinned ? "pinned" : ""}">
           ${!mine ? `<div class="bubble-user">${m.user}</div>` : ""}
-          <div>${m.text.replace(/</g,"&lt;")}</div>
+          ${mediaHtml}
+          ${textHtml}
           <div class="bubble-time">${timeStr(m.ts)}</div>
         </div>`;
       el.appendChild(row);
@@ -285,14 +544,120 @@
     if (wasBottom) el.scrollTop = el.scrollHeight;
   }
 
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => toast(t("copySuccess")));
+  }
+
+  async function togglePin(id) {
+    await api({ action: "togglePin", id, code: myCode });
+    loadMessages();
+  }
+
+  async function deleteMsg(id) {
+    if (!confirm(t("deleteConfirm"))) return;
+    await api({ action: "delete", id, user: me, code: myCode });
+    loadMessages();
+  }
+
+  function onFileChosen(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      toast(t("fileTooBig") + " " + MAX_FILE_MB + " MB");
+      event.target.value = "";
+      return;
+    }
+    pendingFile = file;
+    document.getElementById("attachPreviewName").textContent = "📎 " + file.name;
+    document.getElementById("attachPreview").classList.remove("hidden");
+  }
+  function clearAttachment() {
+    pendingFile = null;
+    document.getElementById("fileInput").value = "";
+    document.getElementById("attachPreview").classList.add("hidden");
+  }
+
   async function sendMsg() {
     const input = document.getElementById("draftInput");
     const text = input.value.trim();
+
+    if (pendingFile) {
+      const file = pendingFile;
+      const uploadingNote = document.getElementById("uploadingNote");
+      uploadingNote.classList.remove("hidden");
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const base64 = dataUrl.split(",")[1];
+        input.value = ""; localStorage.removeItem(draftKey());
+        clearAttachment();
+        const res = await apiPost({ action: "sendFile", user: me, code: myCode, text, data: base64, mimeType: file.type || "application/octet-stream", fileName: file.name });
+        if (res.error) toast(res.error);
+      } catch (err) {
+        toast(t("fileError"));
+      } finally {
+        uploadingNote.classList.add("hidden");
+        loadMessages();
+      }
+      return;
+    }
+
     if (!text) return;
-    input.value = "";
+    input.value = ""; localStorage.removeItem(draftKey());
     await api({ action: "send", user: me, text, code: myCode });
     loadMessages();
   }
+
+  function exportChat() {
+    const lines = allMessages.map(m => `[${new Date(Number(m.ts)).toLocaleString()}] ${m.user}: ${m.text || (m.fileName ? "[" + m.fileName + "]" : "")}`);
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (cfg ? cfg.groupName : "chat") + ".txt";
+    a.click();
+    toast(t("exported"));
+  }
+
+  function exportChatPdf() {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const title = (cfg ? cfg.groupName : "Chat");
+      doc.setFontSize(16);
+      doc.text(title, 14, 16);
+      doc.setFontSize(10);
+      let y = 28;
+      allMessages.forEach(m => {
+        const time = new Date(Number(m.ts)).toLocaleString();
+        const content = m.text || (m.fileName ? "[" + m.fileName + "]" : "");
+        const line = `${time}  ${m.user}: ${content}`;
+        const wrapped = doc.splitTextToSize(line, 180);
+        wrapped.forEach(w => {
+          if (y > 285) { doc.addPage(); y = 16; }
+          doc.text(w, 14, y);
+          y += 6;
+        });
+      });
+      doc.save((title || "chat") + ".pdf");
+      toast(t("exported"));
+    } catch (err) {
+      toast(t("fileError"));
+    }
+  }
+
+  // drag & drop file onto chat
+  document.addEventListener("dragover", e => e.preventDefault());
+  document.addEventListener("drop", e => {
+    e.preventDefault();
+    if (document.getElementById("chatScreen").classList.contains("hidden")) return;
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      onFileChosen({ target: { files: e.dataTransfer.files, value: "" } });
+    }
+  });
 
   init();
 </script>
