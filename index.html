@@ -482,7 +482,11 @@
 
   function renderMediaContent(m) {
     if (m.type === "image" && m.fileUrl) return `<img class="msg-media" src="${m.fileUrl}" onclick="window.open('${m.fileUrl}','_blank')" alt="image" />`;
-    if (m.type === "video" && m.fileUrl) return `<video class="msg-media" src="${m.fileUrl}" controls></video>`;
+    if (m.type === "video" && m.fileUrl) {
+      const openUrl = m.fileUrl.replace("/preview", "/view");
+      return `<iframe class="msg-media" src="${m.fileUrl}" style="width:260px;height:180px;border:none;border-radius:10px;display:block;margin-bottom:4px;" allow="autoplay" allowfullscreen></iframe>
+        <a href="${openUrl}" target="_blank" rel="noopener" style="font-size:11px; opacity:.8; text-decoration:underline;">To'liq oynada ochish ↗</a>`;
+    }
     if (m.type === "file" && m.fileUrl) return `<a class="file-chip" href="${m.fileUrl}" target="_blank" rel="noopener"><span>📄</span><span class="file-name">${(m.fileName || "file").replace(/</g,"&lt;")}</span></a>`;
     return "";
   }
