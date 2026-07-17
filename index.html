@@ -80,7 +80,7 @@
   .invite-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
   .invite-box img { margin-top: 8px; border-radius: 8px; background: #fff; padding: 6px; }
 
-  .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   .chat-header {
     padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex;
     justify-content: space-between; align-items: center; gap: 10px;
@@ -136,6 +136,20 @@
     border-radius: 10px; padding: 6px 10px; margin: 0 20px 8px; font-size: 12.5px; }
   .attach-preview button { background: transparent; color: var(--danger); font-size: 13px; padding: 2px 6px; }
   .uploading-note { font-size: 11px; color: var(--muted); margin: 0 20px 6px; }
+  .emoji-panel { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin: 0 20px 8px; }
+  .emoji-panel button { background: transparent; font-size: 18px; padding: 4px; border-radius: 6px; }
+  .emoji-panel button:hover { background: var(--bg); }
+  #micBtn.recording { background: var(--danger); color: #fff; animation: recPulse 1s ease infinite; }
+  @keyframes recPulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
+  .reaction-bar { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+  .reaction-pill { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 2px 7px;
+    font-size: 12px; cursor: pointer; }
+  .reaction-pill.mine { border-color: var(--amber); }
+  .reaction-picker { position: absolute; bottom: 100%; right: 0; display: flex; gap: 4px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 20px; padding: 4px 6px; box-shadow: 0 4px 12px var(--shadow); }
+  .reaction-picker button { background: transparent; font-size: 16px; padding: 2px 4px; }
+  .seen-note { font-size: 10px; color: var(--muted); text-align: right; margin-top: 2px; }
 
   .toast-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 999;
     display: flex; flex-direction: column; gap: 8px; align-items: center; }
@@ -209,6 +223,7 @@
       <button class="ghost-btn" onclick="exportChat()" data-i18n="exportBtn">⬇ Suhbatni yuklab olish</button>
       <button class="ghost-btn" onclick="exportChatPdf()" data-i18n="exportPdfBtn">⬇ PDF sifatida yuklab olish</button>
       <button class="ghost-btn" onclick="toggleTheme()" id="themeBtnLabel">🌙 Dark</button>
+      <button class="ghost-btn" onclick="toggleSound()" id="soundBtnLabel">🔔 Sound</button>
     </div>
     <div class="invite-box hidden" id="inviteBox">
       <div class="invite-code" id="inviteCode"></div>
@@ -233,16 +248,25 @@
       </div>
     </div>
     <div class="pinned-bar hidden" id="pinnedBar"></div>
-    <div class="messages-area" id="messagesArea"></div>
+    <div class="messages-area" id="messagesArea" onscroll="onScrollMessages()"></div>
+    <button id="scrollBottomBtn" class="hidden" onclick="scrollToBottom()" style="position:absolute; bottom:120px; right:24px; width:40px; height:40px; border-radius:50%; background:var(--amber); color:#1B1F3B; font-size:16px; box-shadow:0 6px 16px var(--shadow); z-index:5;">⬇</button>
+    <div id="typingLine" class="uploading-note hidden"></div>
+    <div id="replyPreview" class="attach-preview hidden">
+      <span id="replyPreviewText"></span>
+      <button onclick="clearReply()">✕ <span data-i18n="cancel">bekor qilish</span></button>
+    </div>
     <div id="attachPreview" class="attach-preview hidden">
       <span id="attachPreviewName"></span>
       <button onclick="clearAttachment()">✕ <span data-i18n="cancel">bekor qilish</span></button>
     </div>
     <div id="uploadingNote" class="uploading-note hidden" data-i18n="uploading">Yuborilmoqda...</div>
+    <div id="emojiPanel" class="emoji-panel hidden"></div>
     <div class="composer">
       <input type="file" id="fileInput" onchange="onFileChosen(event)" />
       <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Fayl">📎</button>
-      <input type="text" id="draftInput" data-i18n-ph="msgPh" placeholder="Xabar yozing..." oninput="saveDraft()" onkeydown="if(event.key==='Enter') sendMsg()" />
+      <button class="attach-btn" onclick="toggleEmojiPanel()" title="Emoji">😊</button>
+      <button class="attach-btn" id="micBtn" onclick="toggleRecording()" title="Ovozli xabar">🎤</button>
+      <input type="text" id="draftInput" data-i18n-ph="msgPh" placeholder="Xabar yozing..." oninput="saveDraft(); notifyTyping();" onkeydown="if(event.key==='Enter') sendMsg()" />
       <button class="send-btn" onclick="sendMsg()" data-i18n="send">Yuborish</button>
     </div>
   </main>
@@ -289,7 +313,14 @@
     fileError: {uz:"Fayl yuborishda xatolik yuz berdi.", en:"Error sending file.", ru:"Ошибка при отправке файла."},
     linkCopied: {uz:"Havola nusxalandi", en:"Link copied", ru:"Ссылка скопирована"},
     exported: {uz:"Suhbat yuklab olindi", en:"Chat exported", ru:"Чат экспортирован"},
-    exportPdfBtn: {uz:"⬇ PDF sifatida yuklab olish", en:"⬇ Export as PDF", ru:"⬇ Экспорт в PDF"}
+    exportPdfBtn: {uz:"⬇ PDF sifatida yuklab olish", en:"⬇ Export as PDF", ru:"⬇ Экспорт в PDF"},
+    isTyping: {uz:"yozmoqda...", en:"is typing...", ru:"печатает..."},
+    seenBy: {uz:"Ko'rildi", en:"Seen", ru:"Просмотрено"},
+    editPrompt: {uz:"Xabarni tahrirlash:", en:"Edit message:", ru:"Изменить сообщение:"},
+    recording: {uz:"🔴 Yozilmoqda... to'xtatish uchun bosing", en:"🔴 Recording... tap to stop", ru:"🔴 Запись... нажмите для остановки"},
+    micError: {uz:"Mikrofonga ruxsat berilmadi", en:"Microphone access denied", ru:"Нет доступа к микрофону"},
+    soundOn: {uz:"Ovoz yoniq", en:"Sound on", ru:"Звук вкл"},
+    soundOff: {uz:"Ovoz o'chiq", en:"Sound off", ru:"Звук выкл"}
   };
   let currentLang = localStorage.getItem("ys_lang") || "uz";
 
@@ -354,9 +385,11 @@
     });
   }
 
-  let me = "", myCode = "", cfg = null, pollTimer = null, pendingFile = null;
+  let me = "", myCode = "", cfg = null, pollTimer = null, pendingFile = null, pendingReply = null;
   let allMessages = [];
   let viewFilter = "all";
+  let knownMessageIds = new Set();
+  let userScrolledUp = false;
 
   function favKey() { return "ys_favs_" + (cfg ? cfg.groupName : "") + "_" + me; }
   function getFavs() { try { return JSON.parse(localStorage.getItem(favKey())) || []; } catch(e){ return []; } }
@@ -372,6 +405,82 @@
   function restoreDraft() {
     const v = localStorage.getItem(draftKey());
     if (v) document.getElementById("draftInput").value = v;
+  }
+
+  function replyTo(id, user, text) {
+    pendingReply = { id, user, text: (text || "").slice(0, 80) };
+    document.getElementById("replyPreviewText").textContent = "↩ " + user + ": " + pendingReply.text;
+    document.getElementById("replyPreview").classList.remove("hidden");
+    document.getElementById("draftInput").focus();
+  }
+  function clearReply() {
+    pendingReply = null;
+    document.getElementById("replyPreview").classList.add("hidden");
+  }
+
+  function onScrollMessages() {
+    const el = document.getElementById("messagesArea");
+    userScrolledUp = el.scrollTop + el.clientHeight < el.scrollHeight - 60;
+    document.getElementById("scrollBottomBtn").classList.toggle("hidden", !userScrolledUp);
+  }
+  function scrollToBottom() {
+    const el = document.getElementById("messagesArea");
+    el.scrollTop = el.scrollHeight;
+    userScrolledUp = false;
+    document.getElementById("scrollBottomBtn").classList.add("hidden");
+  }
+
+  function playNotifySound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {}
+  }
+  if ("Notification" in window && Notification.permission === "default") {
+    document.addEventListener("click", function askOnce() {
+      Notification.requestPermission();
+      document.removeEventListener("click", askOnce);
+    }, { once: true });
+  }
+  function notifyNewMessage(m) {
+    if (soundEnabled()) playNotifySound();
+    if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
+      new Notification(m.user, { body: m.text || "📎 " + t("uploading") });
+    }
+  }
+
+  function highlightMentions(text) {
+    let out = text.replace(/</g, "&lt;");
+    out = out.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">$1</a>');
+    (cfg.members || []).forEach(mem => {
+      const re = new RegExp("@" + mem.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      out = out.replace(re, `<span style="background:rgba(232,163,61,.35);border-radius:4px;padding:0 3px;">@${mem.name}</span>`);
+    });
+    return out;
+  }
+
+  function openLightbox(url) {
+    const overlay = document.createElement("div");
+    overlay.setAttribute("style", "position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:999; display:flex; align-items:center; justify-content:center; cursor:zoom-out;");
+    overlay.innerHTML = `<img src="${url}" style="max-width:92%; max-height:92%; border-radius:8px;" />`;
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
+  }
+
+  function soundEnabled() { return localStorage.getItem("ys_sound") !== "off"; }
+  function toggleSound() {
+    localStorage.setItem("ys_sound", soundEnabled() ? "off" : "on");
+    updateSoundBtn();
+  }
+  function updateSoundBtn() {
+    const btn = document.getElementById("soundBtnLabel");
+    if (btn) btn.textContent = soundEnabled() ? "🔔 " + t("soundOn") : "🔕 " + t("soundOff");
   }
 
   async function api(params) {
@@ -390,6 +499,7 @@
   async function init() {
     applyTheme();
     applyLang();
+    updateSoundBtn();
     if (API_URL.indexOf("PASTE_YOUR") === 0) {
       document.body.innerHTML = "<div class='center-screen'><div class='card'><h1>Not configured</h1><p class='sub'>Set API_URL in index.html.</p></div></div>";
       return;
@@ -437,10 +547,19 @@
     (cfg.members || []).forEach(m => {
       const row = document.createElement("div");
       row.className = "member-row";
-      row.innerHTML = `<div class="avatar" style="background:${colorFor(m)}">${m[0].toUpperCase()}</div>
-        <span>${m}${m === cfg.admin ? " · " + t("owner") : ""}</span>`;
+      const isAdmin = me === cfg.admin;
+      const canRemove = isAdmin && m.name !== cfg.admin;
+      row.innerHTML = `<div class="avatar" style="background:${colorFor(m.name)}">${m.name[0].toUpperCase()}</div>
+        <span style="flex:1;">${m.name}${m.name === cfg.admin ? " · " + t("owner") : ""}</span>
+        ${canRemove ? `<button onclick="removeMember('${m.name}')" style="background:transparent; color:var(--danger); font-size:11px; padding:2px 6px;" title="Remove">✕</button>` : ""}`;
       el.appendChild(row);
     });
+  }
+
+  async function removeMember(name) {
+    if (!confirm(name + " ni guruhdan chiqarmoqchimisiz?")) return;
+    const res = await api({ action: "removeMember", target: name, requester: me, code: myCode });
+    if (res.error) toast(res.error); else { toast(name + " chiqarildi"); refreshConfig(); }
   }
 
   function enterChat(showInviteFirst) {
@@ -456,7 +575,29 @@
     if (showInviteFirst) document.getElementById("inviteBox").classList.remove("hidden");
     renderSkeleton();
     loadMessages();
-    pollTimer = setInterval(() => { loadMessages(); refreshConfig(); }, 3000);
+    markSeen();
+    pollTimer = setInterval(() => { loadMessages(); refreshConfig(); loadTyping(); markSeen(); }, 3000);
+  }
+
+  let lastTypingCall = 0;
+  function notifyTyping() {
+    const now = Date.now();
+    if (now - lastTypingCall < 1500) return;
+    lastTypingCall = now;
+    api({ action: "typing", user: me, code: myCode });
+  }
+  async function loadTyping() {
+    const res = await api({ action: "getTyping", code: myCode, exclude: me });
+    const line = document.getElementById("typingLine");
+    if (res.typing && res.typing.length > 0) {
+      line.textContent = res.typing.join(", ") + " " + t("isTyping");
+      line.classList.remove("hidden");
+    } else {
+      line.classList.add("hidden");
+    }
+  }
+  async function markSeen() {
+    await api({ action: "markSeen", user: me, code: myCode });
   }
 
   function renderSkeleton() {
@@ -481,7 +622,8 @@
   }
 
   function renderMediaContent(m) {
-    if (m.type === "image" && m.fileUrl) return `<img class="msg-media" src="${m.fileUrl}" onclick="window.open('${m.fileUrl}','_blank')" alt="image" />`;
+    if (m.type === "image" && m.fileUrl) return `<img class="msg-media" src="${m.fileUrl}" onclick="openLightbox('${m.fileUrl}')" alt="image" />`;
+    if (m.type === "audio" && m.fileUrl) return `<audio controls src="${m.fileUrl}" style="width:220px; display:block; margin-bottom:4px;"></audio>`;
     if (m.type === "video" && m.fileUrl) {
       const openUrl = m.fileUrl.replace("/preview", "/view");
       return `<iframe class="msg-media" src="${m.fileUrl}" style="width:260px;height:180px;border:none;border-radius:10px;display:block;margin-bottom:4px;" allow="autoplay" allowfullscreen></iframe>
@@ -494,6 +636,12 @@
   async function loadMessages() {
     const res = await api({ action: "messages" });
     if (!res.messages) return;
+    if (knownMessageIds.size > 0) {
+      res.messages.forEach(m => {
+        if (!knownMessageIds.has(m.id) && m.user !== me) notifyNewMessage(m);
+      });
+    }
+    knownMessageIds = new Set(res.messages.map(m => m.id));
     allMessages = res.messages;
     renderPinnedBar();
     renderMessages();
@@ -509,7 +657,6 @@
 
   function renderMessages() {
     const el = document.getElementById("messagesArea");
-    const wasBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
     const search = (document.getElementById("searchInput").value || "").toLowerCase();
     const favs = getFavs();
     let list = allMessages;
@@ -522,30 +669,83 @@
       el.innerHTML = `<div class="empty-state">${allMessages.length === 0 ? t("noMessages") : t("noResults")}</div>`;
       return;
     }
+    const lastMineId = [...allMessages].reverse().find(m => m.user === me)?.id;
+    const REACT_EMOJIS = ["❤️","👍","😂","😮","😢"];
+
     list.forEach(m => {
       const mine = m.user === me;
       const isFav = favs.includes(m.id);
       const row = document.createElement("div");
       row.className = "msg-row" + (mine ? " mine" : "");
       const mediaHtml = renderMediaContent(m);
-      const textHtml = m.text ? `<div>${m.text.replace(/</g,"&lt;")}</div>` : "";
+      const textHtml = m.text ? `<div>${highlightMentions(m.text)}${m.edited ? ` <span style="opacity:.6;font-size:10px;">(${currentLang==="uz"?"tahrirlangan":currentLang==="ru"?"изменено":"edited"})</span>` : ""}</div>` : "";
+      let replyHtml = "";
+      if (m.replyTo) {
+        try {
+          const r = JSON.parse(m.replyTo);
+          replyHtml = `<div style="border-left:3px solid var(--amber); padding:2px 8px; margin-bottom:4px; font-size:12px; opacity:.8;">↩ ${r.user}: ${(r.text||"").replace(/</g,"&lt;")}</div>`;
+        } catch (e) {}
+      }
+
+      const reactionEntries = Object.entries(m.reactions || {});
+      const reactionsHtml = reactionEntries.length ? `<div class="reaction-bar">${reactionEntries.map(([emoji, users]) =>
+        `<div class="reaction-pill ${users.includes(me) ? "mine" : ""}" onclick="reactMsg('${m.id}','${emoji}')">${emoji} ${users.length}</div>`
+      ).join("")}</div>` : "";
+
+      let seenHtml = "";
+      if (mine && m.id === lastMineId && cfg.members) {
+        const seenByOthers = cfg.members.some(mem => mem.name !== me && Number(mem.lastSeenTs || 0) > Number(m.ts));
+        if (seenByOthers) seenHtml = `<div class="seen-note">✓✓ ${t("seenBy")}</div>`;
+      }
+
       row.innerHTML = `
         <div class="msg-toolbar">
           <button onclick="toggleFav('${m.id}')" title="Favorite">${isFav ? "★" : "☆"}</button>
           <button onclick="togglePin('${m.id}')" title="Pin">📌</button>
+          <button onclick="openReactionPicker(event,'${m.id}')" title="React">😊</button>
+          <button onclick="replyTo('${m.id}','${m.user}',\`${(m.text||"").replace(/`/g,"'").replace(/</g,"&lt;")}\`)" title="Reply">↩</button>
           ${m.text ? `<button onclick="copyText(\`${m.text.replace(/`/g,"'").replace(/</g,"&lt;")}\`)" title="Copy">📋</button>` : ""}
+          ${mine && m.text ? `<button onclick="editMsg('${m.id}','${(m.text||"").replace(/'/g,"&#39;").replace(/</g,"&lt;")}')" title="Edit">✏️</button>` : ""}
           ${mine ? `<button onclick="deleteMsg('${m.id}')" title="Delete">🗑</button>` : ""}
         </div>
         ${!mine ? `<div class="avatar-sm" style="background:${colorFor(m.user)}">${m.user[0].toUpperCase()}</div>` : ""}
-        <div class="bubble ${mine ? "mine" : "theirs"} ${m.pinned ? "pinned" : ""}">
+        <div class="bubble ${mine ? "mine" : "theirs"} ${m.pinned ? "pinned" : ""}" style="position:relative;">
           ${!mine ? `<div class="bubble-user">${m.user}</div>` : ""}
+          ${replyHtml}
           ${mediaHtml}
           ${textHtml}
           <div class="bubble-time">${timeStr(m.ts)}</div>
+          ${reactionsHtml}
+          ${seenHtml}
         </div>`;
       el.appendChild(row);
     });
-    if (wasBottom) el.scrollTop = el.scrollHeight;
+    if (!userScrolledUp) el.scrollTop = el.scrollHeight;
+  }
+
+  function openReactionPicker(evt, id) {
+    document.querySelectorAll(".reaction-picker").forEach(p => p.remove());
+    const REACT_EMOJIS = ["❤️","👍","😂","😮","😢"];
+    const picker = document.createElement("div");
+    picker.className = "reaction-picker";
+    picker.innerHTML = REACT_EMOJIS.map(e => `<button onclick="reactMsg('${id}','${e}'); this.parentElement.remove();">${e}</button>`).join("");
+    evt.target.closest(".msg-toolbar").appendChild(picker);
+    setTimeout(() => document.addEventListener("click", function closeOnce(ev) {
+      if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener("click", closeOnce); }
+    }), 10);
+  }
+
+  async function reactMsg(id, emoji) {
+    await api({ action: "react", id, user: me, code: myCode, emoji });
+    loadMessages();
+  }
+
+  async function editMsg(id, oldText) {
+    const clean = oldText.replace(/&#39;/g, "'").replace(/&lt;/g, "<");
+    const newText = prompt(t("editPrompt"), clean);
+    if (newText === null || newText.trim() === "" || newText === clean) return;
+    await api({ action: "editMessage", id, user: me, code: myCode, text: newText.trim() });
+    loadMessages();
   }
 
   function copyText(text) {
@@ -612,8 +812,73 @@
 
     if (!text) return;
     input.value = ""; localStorage.removeItem(draftKey());
-    await api({ action: "send", user: me, text, code: myCode });
+    const replyPayload = pendingReply ? JSON.stringify({ user: pendingReply.user, text: pendingReply.text }) : "";
+    clearReply();
+    await api({ action: "send", user: me, text, code: myCode, replyTo: replyPayload });
     loadMessages();
+  }
+
+  // ---------- emoji picker ----------
+  const EMOJI_LIST = ["😀","😂","😍","😊","😉","😎","🤔","😢","😭","😡","👍","👎","🙏","👏","💪","🎉","❤️","🔥","✨","😴","🥳","😅","🤗","😇","🙄","😱","🤝","👋","🍕","☕","⚽","🎮","📚","🌙","☀️","🌸"];
+  function toggleEmojiPanel() {
+    const panel = document.getElementById("emojiPanel");
+    if (!panel.classList.contains("hidden")) { panel.classList.add("hidden"); return; }
+    panel.innerHTML = EMOJI_LIST.map(e => `<button onclick="insertEmoji('${e}')">${e}</button>`).join("");
+    panel.classList.remove("hidden");
+  }
+  function insertEmoji(emoji) {
+    const input = document.getElementById("draftInput");
+    input.value += emoji;
+    input.focus();
+    saveDraft();
+  }
+
+  // ---------- voice messages ----------
+  let mediaRecorder = null, audioChunks = [], isRecording = false;
+  async function toggleRecording() {
+    if (isRecording) {
+      mediaRecorder.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(tr => tr.stop());
+        isRecording = false;
+        document.getElementById("micBtn").classList.remove("recording");
+        document.getElementById("typingLine").classList.add("hidden");
+        const blob = new Blob(audioChunks, { type: "audio/webm" });
+        const uploadingNote = document.getElementById("uploadingNote");
+        uploadingNote.classList.remove("hidden");
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          const base64 = dataUrl.split(",")[1];
+          const res = await apiPost({ action: "sendFile", user: me, code: myCode, text: "", data: base64, mimeType: "audio/webm", fileName: "voice-message.webm" });
+          if (res.error) toast(res.error);
+        } catch (err) {
+          toast(t("fileError"));
+        } finally {
+          uploadingNote.classList.add("hidden");
+          loadMessages();
+        }
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      document.getElementById("micBtn").classList.add("recording");
+      const line = document.getElementById("typingLine");
+      line.textContent = t("recording");
+      line.classList.remove("hidden");
+    } catch (err) {
+      toast(t("micError"));
+    }
   }
 
   function exportChat() {
